@@ -1,24 +1,6 @@
-#include<iostream>
-#include<map>
-#include<vector>
-#include<string>
-#define print1d(x) {for(int v: x) {cout << v << " ";} cout << endl;}
+#include <alg.h>
 
-using namespace std;
-
-struct policy {
-    int8_t allow = -1;
-};
-
-struct Trie {
-    int rule;
-    struct Trie* children[2] = {};
-};
-
-int cnt = 0;
-map<uint16_t, policy> rules[65536];
-
-void add_rule(struct Trie* trie, string ip, int length, int port, int allow, int index = 0) {
+void add_rule(struct Trie* trie, string ip, int length, int port, int allow, int *cnt, int index) {
     if(rules[trie->rule][port].allow == !allow) return; // Conflict rule, discarding low-priority rule
     if(index == length) {
         rules[trie->rule][port].allow = allow;
@@ -27,12 +9,12 @@ void add_rule(struct Trie* trie, string ip, int length, int port, int allow, int
     int bit = ip[index] - '0';
     if(trie->children[bit] == NULL) {
         trie->children[bit] = new struct Trie;
-        trie->children[bit]->rule = cnt++;
+        trie->children[bit]->rule = (*cnt)++;
     }
-    add_rule(trie->children[bit], ip, length, port, allow, index + 1);
+    add_rule(trie->children[bit], ip, length, port, allow, cnt, index + 1);
 }
 
-int check(struct Trie* trie, const string& ip, int port, int index = 0) {
+int check(struct Trie* trie, const string& ip, int port, int index) {
     if (!trie) return -1;
     if (index == ip.size()) { 
         return rules[trie->rule][port].allow;
@@ -45,7 +27,7 @@ int check(struct Trie* trie, const string& ip, int port, int index = 0) {
     return rules[trie->rule][port].allow;
 }
 
-int compress_trie(struct Trie* root, vector<int>& compressed_array, int index = 0) {
+int compress_trie(struct Trie* root, vector<int>& compressed_array, int index) {
     if (root == NULL) return index;
 
     int current_index = index;
@@ -64,7 +46,7 @@ int compress_trie(struct Trie* root, vector<int>& compressed_array, int index = 
 }
 
 
-struct Trie* rebuildTrie(const vector<int>& compressed_array, int index = 0) {
+struct Trie* rebuildTrie(const vector<int>& compressed_array, int index) {
     if (index == -1 || index >= compressed_array.size())
         return NULL;
 
@@ -84,7 +66,7 @@ struct Trie* rebuildTrie(const vector<int>& compressed_array, int index = 0) {
     return node;
 }
 
-int check_on_compressed_trie(const vector<int>& compressed_array, string ip, int port, int index = 0, int stridx = 0) {
+int check_on_compressed_trie(const vector<int>& compressed_array, string ip, int port, int index, int stridx) {
     if (index == -1 || index >= compressed_array.size()) return -1; 
     if (stridx == ip.size()) {
         return rules[compressed_array[index]][port].allow; 
@@ -104,32 +86,5 @@ int check_on_compressed_trie(const vector<int>& compressed_array, string ip, int
     }
 
     return rules[compressed_array[index]][port].allow;
-}
-
-
-int main(){
-    struct Trie* trie = new struct Trie;
-    vector<int> compressed, compressed2;
-    string ip; int length; int port; bool allow;
-    while(cin >> ip >> length >> port >> allow) {
-        if(ip == "-") break;
-        cout << ip << " " << port << " " << allow << endl;
-        add_rule(trie, ip, length, port, allow);
-    }
-    cout << "------- Test Compress And Rebuild -------" << endl;
-    compress_trie(trie, compressed);
-    struct Trie* trie2;
-    trie2 = rebuildTrie(compressed);
-    compress_trie(trie2, compressed2);
-    trie = rebuildTrie(compressed2);
-    cout << "------- Test Firewall And Filter -------" << endl;
-    while(cin >> ip >> port) {
-        cout << "-----" << endl;
-        cout << ip << " " << port << endl;
-        cout << "ORIGINAL: " << check(trie, ip, port) << endl;
-        cout << "REBUILD: " << check(trie2, ip, port) << endl;
-        cout << "COMPRESSED: " << check_on_compressed_trie(compressed, ip, port) << endl;
-    }
-    return 0;
 }
 
